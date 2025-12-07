@@ -63,40 +63,44 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
         """
 
         "*** YOUR CODE HERE ***"
-        labelCounts = util.Counter()               # counts of each label
-        labelTotals = util.Counter()               # number of examples per label
-        featureCounts = {}                         # label -> Counter(feature -> count of "on")
+        #for each case, counts how many times a number came and what pixels were on for that pic 
+       
+        labelCounts = util.Counter()   
+        labelTotals = util.Counter() 
+
+        featureCounts = {}                        
 
         for label in self.legalLabels:
             featureCounts[label] = util.Counter()
 
         for i in range(len(trainingData)):
-            datum = trainingData[i]                 # Counter of features -> 0/1
+            datum = trainingData[i]             
             label = trainingLabels[i]
 
             labelCounts[label] += 1
             labelTotals[label] += 1
 
             for f, value in datum.items():
-                if value > 0:                         # treat any positive as "on"
+                if value > 0:                         
                     featureCounts[label][f] += 1
 
-        # 2. Compute prior P(Y)
+        # Probabilty 
         self.prior = util.Counter()
         totalExamples = len(trainingLabels)
         for label in self.legalLabels:
-        # do not smooth the prior
-            #P(Y=label) = count(label)/ total ex
+            #P( certain label) = count(label)/ total ex
             self.prior[label] = float(labelCounts[label]) / float(totalExamples)
 
-        # 3. Try each k in kgrid, pick the best on validation
+        #Laplace smoothing and k
+        #Small k = trust the data a lot
+        #Big k = trust the data a little
         bestK = None
         bestAccuracy = -1.0
         bestConditionalProb = None
 
         for k in kgrid:
-        # build conditional probabilities for this k
-            conditionalProb = {}                   # label -> Counter(feature -> P(F=1|label))
+        # make conditional probabilities for this k
+            conditionalProb = {}                   
 
             for label in self.legalLabels:
                 cond = util.Counter()
@@ -104,7 +108,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
 
                 for f in self.features:
                     onCount = featureCounts[label][f]
-                    # Laplace smoothing with binary features: denom = N_y + 2k
+                    # Laplace smoothing denom = N_y + 2k
                     probOn = (onCount + k) * 1.0 / (N_y + 2.0 * k)
                     cond[f] = probOn
 
@@ -120,13 +124,13 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
                     correct += 1
             accuracy = float(correct) / len(validationLabels)
 
-        # update best k (tie break: smaller k)
+        # update best k 
             if accuracy > bestAccuracy or (accuracy == bestAccuracy and (bestK is None or k < bestK)):
                 bestAccuracy = accuracy
                 bestK = k
                 bestConditionalProb = conditionalProb
 
-        # 4. Fix the best k and its conditional probabilities
+        # best k and conditional probabilities
         self.k = bestK
         self.conditionalProb = bestConditionalProb
 
@@ -164,7 +168,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
         "*** YOUR CODE HERE ***"
 
         for label in self.legalLabels:
-        # start with log prior P(Y = label)
+        # how common is this number 
             logProb = math.log(self.prior[label])
 
         # add log prob for each feature
@@ -194,5 +198,21 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
         featuresOdds = []
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        odds = util.Counter()
+
+        eps = 1e-5  # small constant to avoid zero denom
+
+        for f in self.features:
+            p1 = self.conditionalProb[label1][f]
+            p2 = self.conditionalProb[label2][f]
+            odds[f] = (p1 + eps) / (p2 + eps)
+
+        # Sort features by odds value, descending order
+        sorted_features = sorted(odds.items(), key=lambda item: item[1], reverse=True)
+
+        # Take the top 100 
+        featuresOdds = [f for (f, value) in sorted_features[:100]]
+
+
         return featuresOdds
