@@ -10,10 +10,10 @@
 
 def q2():
     
-    return 
+    return 'e' 
     
 
 def q4():
     
-    return 
+    return 'a'
     
