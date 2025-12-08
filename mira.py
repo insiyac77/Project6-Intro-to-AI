@@ -57,7 +57,53 @@ class MiraClassifier:
         representing a vector of values.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        self.features = trainingData[0].keys()
+        bestC = None
+        bestAccuracy = -1.0
+        bestWeights = None
+        for c in Cgrid:
+            # training
+            for iteration in range(self.max_iterations):
+                print("Starting iteration ", iteration, "...")
+                for i in range(len(trainingData)):
+                    x = trainingData[i]
+                    y_t = trainingLabels[i]
+
+                    scores = util.Counter()
+                    for label in self.legalLabels:
+                        scores[label] = self.weights[label] * x
+
+                    y_pred = scores.argMax()
+
+                    normx = x*x # multiplication defined as the dot product in util.Counter
+                    tau = min(c, ((self.weights[y_t] - self.weights[y_pred]) * x + 1.0)/(2.0 * normx))
+
+                    taux = util.Counter() # multiplying scalar tau by vector x
+                    for idx, xi in x.items():
+                        taux[idx] = tau*xi
+
+                    if y_pred != y_t:
+                        self.weights[y_t] += taux
+                        self.weights[y_pred] -= taux
+
+            # testing on held-out data
+            guesses = self.classify(validationData)
+            correct = 0
+            for i in range(len(validationLabels)):
+                if guesses[i] == validationLabels[i]:
+                    correct += 1
+            accuracy = float(correct) / len(validationLabels)
+
+            # update best c
+            if accuracy > bestAccuracy or (accuracy == bestAccuracy and (bestC is None or c < bestC)):
+                bestAccuracy = accuracy
+                bestC = c
+                bestWeights = self.weights
+
+        # best k and conditional probabilities
+        self.C = bestC
+        self.weights = bestWeights
 
     def classify(self, data ):
         """
